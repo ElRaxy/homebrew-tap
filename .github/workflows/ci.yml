@@ -22,16 +22,24 @@ jobs:
         os: [macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      # Homebrew RECHAZA una formula que no viva dentro de un tap, asi que el checkout
-      # va directo al sitio donde los busca. Es la unica forma de probar la copia de
-      # esta rama en vez de la que ya esta publicada.
-      - name: donde Homebrew busca los taps
-        run: echo "TAP=$(brew --repository)/Library/Taps/elraxy/homebrew-tap" >> "$GITHUB_ENV"
+      # En los runners de Ubuntu Homebrew esta instalado pero NO en el PATH de los pasos.
+      # Sin esta linea `brew --repository` sale vacio, la ruta del tap queda en `/Library`
+      # y el paso siguiente intenta escribir en la raiz del disco: un "permission denied"
+      # que no se parece en nada a su causa. La guarda lo dice en una linea.
+      - name: Homebrew en el PATH, y donde busca los taps
+        run: |
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv 2>/dev/null || true)"
+          command -v brew > /dev/null || { echo "no hay Homebrew en este runner"; exit 1; }
+          dirname "$(command -v brew)" >> "$GITHUB_PATH"
+          echo "TAP=$(brew --repository)/Library/Taps/elraxy/homebrew-tap" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           path: tap
 
+      # Homebrew RECHAZA cualquier formula que no viva dentro de un tap, asi que la copia
+      # de esta rama se monta donde los busca. Es la unica forma de probar lo que trae el
+      # PR en vez de lo que ya esta publicado.
       - name: montar la copia de esta rama como el tap elraxy/tap
         run: |
           mkdir -p "$(dirname "$TAP")"

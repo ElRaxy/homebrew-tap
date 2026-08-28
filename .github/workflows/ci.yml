@@ -1,0 +1,53 @@
+name: ci
+on:
+  push:
+  pull_request:
+  # Una formula puede pudrirse sin que nadie la toque: basta con que cambie el python
+  # del que depende, o con que la release a la que apunta deje de estar. Una vuelta
+  # semanal lo dice antes de que lo diga un usuario.
+  schedule:
+    - cron: "17 6 * * 1"
+
+# Solo lee e instala en su propia maquina efimera: no publica, no comenta, no escribe.
+permissions:
+  contents: read
+
+jobs:
+  formula:
+    # macOS y Linux: la formula reescribe el shebang al python de Homebrew, y esa ruta
+    # no es la misma en los dos. Probar en uno solo deja la mitad sin mirar.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Homebrew RECHAZA una formula que no viva dentro de un tap, asi que el checkout
+      # va directo al sitio donde los busca. Es la unica forma de probar la copia de
+      # esta rama en vez de la que ya esta publicada.
+      - name: donde Homebrew busca los taps
+        run: echo "TAP=$(brew --repository)/Library/Taps/elraxy/homebrew-tap" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          path: tap
+
+      - name: montar la copia de esta rama como el tap elraxy/tap
+        run: |
+          mkdir -p "$(dirname "$TAP")"
+          ln -s "$GITHUB_WORKSPACE/tap" "$TAP"
+          brew tap | grep -qx elraxy/tap
+
+      - name: es ruby valido y cumple el estilo de Homebrew
+        run: |
+          ruby -c "$TAP/Formula/sereno.rb"
+          brew style elraxy/tap/sereno
+
+      - name: se instala
+        run: brew install elraxy/tap/sereno
+
+      - name: pasa su propio test — version, arranque sin sesiones, demo y flag invalido
+        run: brew test elraxy/tap/sereno
+
+      - name: el audit no tiene nada que decir
+        run: brew audit --strict --online elraxy/tap/sereno

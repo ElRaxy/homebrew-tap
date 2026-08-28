@@ -6,9 +6,6 @@ class Sereno < Formula
   # El asset suelto de la release, no el tarball del tag: el repo lleva un GIF de
   # demo de 1,7 MB que no pinta nada en una instalacion. Esto son 244 KB.
   url "https://github.com/ElRaxy/sereno/releases/download/v1.13.1/sereno"
-  # La URL no lleva la version en el nombre del fichero, asi que Homebrew no puede
-  # deducirla. Sin esta linea la formula se instala como version cero.
-  version "1.13.1"
   sha256 "61d80f727c9cc5491dd122b1fe9e11c909a430dc54a826550832043fb48e6e82"
   license "MIT"
 
@@ -20,6 +17,21 @@ class Sereno < Formula
   depends_on "python@3.13"
 
   def install
+    # La v1.13.0 se publico con un asset que NO era el programa —un log de git, por una
+    # expansion de zsh— y las releases de GitHub son inmutables, asi que ese fichero roto
+    # sigue ahi para siempre. `release.sh` verifica lo publicado descargandolo; esto es la
+    # misma comprobacion en el otro extremo del cable, porque `brew install` se traga sin
+    # rechistar cualquier cosa cuyo sha256 cuadre, y el fallo no se veria hasta arrancar.
+    # Dos hechos, y el veredicto compuesto encima: nada de "parece correcto".
+    contenido = (buildpath/"sereno").read
+    shebang_ok = contenido.start_with?("#!/usr/bin/env python3\n")
+    version_ok = contenido.include?("VERSION = \"#{version}\"")
+    odie <<~EOS if !shebang_ok || !version_ok
+      what was downloaded is not sereno #{version}
+        starts with the shebang: #{shebang_ok}
+        declares VERSION = "#{version}": #{version_ok}
+    EOS
+
     bin.install "sereno"
     # El shebang de serie es `/usr/bin/env python3`, que en un Mac sin Command Line
     # Tools no resuelve a nada. Apuntarlo al python de esta formula es lo que hace

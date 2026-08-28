@@ -5,8 +5,8 @@ class Sereno < Formula
   homepage "https://github.com/ElRaxy/sereno"
   # El asset suelto de la release, no el tarball del tag: el repo lleva un GIF de
   # demo de 1,7 MB que no pinta nada en una instalacion. Esto son 244 KB.
-  url "https://github.com/ElRaxy/sereno/releases/download/v1.21.0/sereno"
-  sha256 "9b562a2edf458bbf4f03405dd710e7cb16a6865ce89d7c883c1e2e3fae16538c"
+  url "https://github.com/ElRaxy/sereno/releases/download/v1.22.0/sereno"
+  sha256 "2904bb9b4468ea0c86d3e05db552ca5638598e833b409e80250b99bcd6872436"
   license "MIT"
 
   livecheck do
